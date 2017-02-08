@@ -3,9 +3,10 @@ import { loadImageAsync } from './util'
 let imageCache = {}
 
 export default class ReactiveListener {
-    constructor ({ el, src, error, loading, bindType, $parent, options, elRenderer }) {
+    constructor ({ el, src, beforeLoading, error, loading, bindType, $parent, options, elRenderer }) {
         this.el = el
         this.src = src
+        this.beforeLoading = beforeLoading
         this.error = error
         this.loading = loading
         this.bindType = bindType
@@ -28,6 +29,8 @@ export default class ReactiveListener {
 
         this.$parent = $parent
         this.elRenderer = elRenderer
+
+        this.render('beforeLoading', false)
     }
 
     initState () {

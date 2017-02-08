@@ -1,7 +1,7 @@
-import { 
-    remove, 
-    some, 
-    find, 
+import {
+    remove,
+    some,
+    find,
     _,
     throttle,
     supportWebp,
@@ -18,11 +18,12 @@ const DEFAULT_EVENTS = ['scroll', 'wheel', 'mousewheel', 'resize', 'animationend
 
 export default function (Vue) {
     return class Lazy {
-        constructor ({ preLoad, error, loading, attempt, silent, scale, listenEvents, hasbind, filter, adapter }) {
+        constructor ({ preLoad, beforeLoading, error, loading, attempt, silent, scale, listenEvents, hasbind, filter, adapter }) {
             this.ListenerQueue = []
             this.options = {
                 silent: silent || true,
                 preLoad: preLoad || 1.3,
+                beforeLoading: beforeLoading || DEFAULT_URL,
                 error: error || DEFAULT_URL,
                 loading: loading || DEFAULT_URL,
                 attempt: attempt || 3,
@@ -61,7 +62,7 @@ export default function (Vue) {
                 return Vue.nextTick(this.lazyLoadHandler)
             }
 
-            let { src, loading, error } = this.valueFormatter(binding.value)
+            let { src, beforeLoading, loading, error } = this.valueFormatter(binding.value)
 
             Vue.nextTick(() => {
                 let tmp = getBestSelectionFromSrcset(el, this.options.scale)
@@ -87,6 +88,7 @@ export default function (Vue) {
                     bindType: binding.arg,
                     $parent,
                     el,
+                    beforeLoading,
                     loading,
                     error,
                     src,
@@ -114,6 +116,9 @@ export default function (Vue) {
                 loading,
                 error
             })
+
+            // Run filters again after update
+            this.listenerFilter(exist);
             this.lazyLoadHandler()
             Vue.nextTick(() => this.lazyLoadHandler())
         }
@@ -185,6 +190,8 @@ export default function (Vue) {
 
             let src
             switch (state) {
+                case 'beforeLoading':
+                    src = listener.beforeLoading
                 case 'loading':
                     src = listener.loading
                     break
@@ -210,18 +217,13 @@ export default function (Vue) {
         }
 
         listenerFilter (listener) {
-            if (this.options.filter.webp && this.options.supportWebp) {
-                listener.src = this.options.filter.webp(listener, this.options)
-            }
-            if (this.options.filter.customer) {
-                listener.src = this.options.filter.customer(listener, this.options)
-            }
+            Object.keys(this.options.filter).forEach(key => listener.src = this.options.filter[key](listener))
             return listener
         }
 
 
         /**
-         * generate loading loaded error image url 
+         * generate loading loaded error image url
          * @param {string} image's src
          * @return {object} image's loading, loaded, error url
          */
@@ -229,6 +231,7 @@ export default function (Vue) {
             let src = value
             let loading = this.options.loading
             let error = this.options.error
+            let beforeLoading = this.options.beforeLoading
 
             // value is object
             if (Vue.util.isObject(value)) {
@@ -236,9 +239,11 @@ export default function (Vue) {
                 src = value.src
                 loading = value.loading || this.options.loading
                 error = value.error || this.options.error
+                beforeLoading = value.beforeLoading || this.options.error
             }
             return {
                 src,
+                beforeLoading,
                 loading,
                 error
             }
